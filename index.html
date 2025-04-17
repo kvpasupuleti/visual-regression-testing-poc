@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visual Regression Testing POC</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Visual Regression Testing POC</h1>
+    
+    <div class="editor-container">
+      <div class="code-editors">
+        <div class="editor">
+          <h3>HTML</h3>
+          <textarea id="html-editor" placeholder="Enter HTML code here..."></textarea>
+        </div>
+        <div class="editor">
+          <h3>CSS</h3>
+          <textarea id="css-editor" placeholder="Enter CSS code here..."></textarea>
+        </div>
+        <div class="editor">
+          <h3>JavaScript</h3>
+          <textarea id="js-editor" placeholder="Enter JavaScript code here..."></textarea>
+        </div>
+      </div>
+      
+      <div class="buttons">
+        <button id="run-btn">Run Code</button>
+        <button id="test-btn">Run Visual Test</button>
+      </div>
+    </div>
+    
+    <div class="output-container">
+      <div class="preview-section">
+        <h3>User Output</h3>
+        <div class="iframe-container">
+          <iframe id="user-output" sandbox="allow-scripts allow-same-origin"></iframe>
+        </div>
+      </div>
+      
+      <div class="preview-section">
+        <h3>Expected Output</h3>
+        <div class="iframe-container">
+          <iframe id="expected-output" sandbox="allow-scripts allow-same-origin"></iframe>
+        </div>
+      </div>
+    </div>
+    
+    <div class="results-container">
+      <h2>Test Results</h2>
+      <div class="score-display">
+        <div class="score-box">
+          <h3>Visual Similarity</h3>
+          <div id="visual-score">-</div>
+        </div>
+        <div class="score-box">
+          <h3>Functional Flow</h3>
+          <div id="functional-score">-</div>
+        </div>
+        <div class="score-box">
+          <h3>Total Score</h3>
+          <div id="total-score">-</div>
+        </div>
+      </div>
+      
+      <div class="diff-container">
+        <h3>Visual Difference</h3>
+        <canvas id="diff-canvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script src="./index.js" type="module"></script>
+</body>
+</html> 
