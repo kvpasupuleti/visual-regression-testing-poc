@@ -1,0 +1,7 @@
+{
+  "extends": "@parcel/config-default",
+  "optimizers": {
+    "*.jpg": ["...", "@parcel/optimizer-image"],
+    "assets/eye_logo.jpg": []
+  }
+} 

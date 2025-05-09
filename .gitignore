@@ -37,4 +37,8 @@ robots.txt
 
 /.parcel-cache/*
 
-/dist
+# Parcel build directories
+dist/
+
+# Dependency directories
+node_modules/
