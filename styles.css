@@ -35,6 +35,10 @@ h1 {
   margin-bottom: 20px;
 }
 
+.editor-container h2 {
+  color: #2980b9;
+}
+
 .code-editors {
   display: flex;
   gap: 15px;
@@ -152,4 +156,170 @@ iframe {
   max-width: 100%;
   height: auto;
   margin-top: 10px;
+}
+
+/* Solution editor container */
+.solution-editor-container {
+  margin-top: 20px;
+  border-top: 1px solid #ddd;
+  padding-top: 20px;
+}
+
+.solution-editor-container h2 {
+  color: #2980b9;
+  margin-bottom: 15px;
+}
+
+#update-solution-btn {
+  background-color: #27ae60;
+}
+
+#update-solution-btn:hover {
+  background-color: #219955;
+}
+
+/* Collapsible sections */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.toggle-btn {
+  background-color: #7f8c8d;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.toggle-btn:hover {
+  background-color: #6c7a7a;
+}
+
+.collapsible-section {
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.collapsible-section.collapsed {
+  max-height: 0;
+}
+
+/* Button loader styles */
+.btn-with-loader {
+  position: relative;
+}
+
+.loader {
+  display: none;
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 0.8s linear infinite;
+}
+
+.btn-with-loader.loading {
+  padding-left: 35px; /* Make space for the loader */
+  pointer-events: none; /* Prevent clicks while loading */
+  opacity: 0.85;
+}
+
+.btn-with-loader.loading .loader {
+  display: block;
+}
+
+@keyframes spin {
+  to {
+    transform: translateY(-50%) rotate(360deg);
+  }
+}
+
+/* Additional styles for the score classes */
+.score {
+  font-size: 28px;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+.visual-score {
+  background-color: rgba(46, 204, 113, 0.1);
+}
+
+.func-score {
+  background-color: rgba(52, 152, 219, 0.1);
+}
+
+.total-score {
+  background-color: rgba(155, 89, 182, 0.1);
+}
+
+.score-box-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Info icon and tooltip styles */
+.info-icon {
+  display: inline-block;
+  font-size: 14px;
+  color: #3498db;
+  cursor: help;
+  margin-left: 5px;
+  width: 18px;
+  text-align: center;
+  background-color: transparent;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+/* Score box title styling */
+.score-box h3 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes fadeIn {
+  to { opacity: 1; }
 } 
+
+
+.tooltip-wrapper {
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.custom-tooltip {
+  visibility: hidden;
+  width: 200px;
+  background-color: black;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 10px;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%; /* Position it above the text */
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px;
+  white-space: normal;
+}
+
+.tooltip-wrapper:hover .custom-tooltip {
+  visibility: visible;
+}

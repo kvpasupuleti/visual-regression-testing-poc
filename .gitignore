@@ -32,3 +32,9 @@ deploy_to_s3*
 robots.txt
 
 .idea/
+
+.parcel-cache/
+
+/.parcel-cache/*
+
+/dist
