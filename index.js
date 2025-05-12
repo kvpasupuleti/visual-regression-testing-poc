@@ -861,7 +861,34 @@ function compareWithPixelMatch(userCanvas, expectedCanvas) {
     diffContext = tempCanvas.getContext('2d');
   }
   
-  const diffImageData = diffContext.createImageData(width, height);
+  // First, draw a side-by-side comparison
+  diffContext.fillStyle = "#f0f0f0";
+  diffContext.fillRect(0, 0, width, height);
+  
+  // Draw the user and expected output separately first
+  diffContext.drawImage(userCanvas, 0, 0, width/2, height);
+  diffContext.drawImage(expectedCanvas, width/2, 0, width/2, height);
+  
+  // Add labels
+  diffContext.font = "14px Arial";
+  diffContext.fillStyle = "#000";
+  diffContext.fillText("User Output", 10, 20);
+  diffContext.fillText("Expected Output", width/2 + 10, 20);
+  
+  // Draw a separator line
+  diffContext.strokeStyle = "#000";
+  diffContext.beginPath();
+  diffContext.moveTo(width/2, 0);
+  diffContext.lineTo(width/2, height);
+  diffContext.stroke();
+  
+  // Now create a diff image below
+  const diffHeight = Math.min(height, 300); // Limit diff height
+  diffCanvas.height = height + diffHeight + 30; // Add space for label
+
+  
+  // Create the actual diff image
+  const diffImageData = diffContext.createImageData(width, diffHeight);
   
   // Create user and expected image data
   const userContext = document.createElement('canvas').getContext('2d');
@@ -876,23 +903,40 @@ function compareWithPixelMatch(userCanvas, expectedCanvas) {
   expectedContext.drawImage(expectedCanvas, 0, 0);
   const expectedImageData = expectedContext.getImageData(0, 0, width, height);
   
+  // Custom diff color options with clearly distinguishable colors
+  const diffOptions = {
+    threshold: 0.1,
+    includeAA: true,
+    alpha: 0.5,
+    diffColor: [255, 0, 0],      // Red for differences
+    diffColorAlt: [0, 0, 255],   // Blue for missing in user output
+    diffMask: true
+  };
+  
   // Compare the images
   const mismatchedPixels = pixelmatch(
     userImageData.data,
     expectedImageData.data,
     diffImageData.data,
     width,
-    height,
-    { threshold: 0.1 }
+    diffHeight,
+    diffOptions
   );
   
-  // Draw diff image if we have a canvas to draw to
-  if (diffCanvas) {
-    diffContext.putImageData(diffImageData, 0, 0);
-  }
+  // Draw diff image at the bottom part of the canvas
+  diffContext.putImageData(diffImageData, 0, height + 30);
+  
+  // Add color legend
+  diffContext.fillStyle = "rgba(255, 0, 0, 0.7)";
+  diffContext.fillRect(width - 140, height + 5, 15, 15);
+  diffContext.fillStyle = "rgba(0, 0, 255, 0.7)";
+  diffContext.fillRect(width - 140, height + 25, 15, 15);
+  diffContext.fillStyle = "#000";
+  diffContext.fillText("Differences", width - 120, height + 15);
+  diffContext.fillText("Missing Content", width - 120, height + 35);
   
   // Calculate mismatch percentage
-  const totalPixels = width * height;
+  const totalPixels = width * diffHeight;
   const matchPercentage = 100 - (mismatchedPixels / totalPixels * 100);
   
   return Math.round(matchPercentage);
