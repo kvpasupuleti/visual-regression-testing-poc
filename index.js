@@ -25,6 +25,11 @@ const functionalScoreElement = document.getElementById('functional-score');
 const totalScoreElement = document.getElementById('total-score');
 const diffCanvas = document.getElementById('diff-canvas');
 
+// DOM elements for custom test cases
+const customTestsEditor = document.getElementById('custom-tests-editor');
+const saveTestsButton = document.getElementById('save-tests-btn');
+const runCustomTestsButton = document.getElementById('run-custom-tests-btn');
+
 // Default solution code
 const DEFAULT_HTML = `
 <!DOCTYPE html>
@@ -163,6 +168,66 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 `;
+
+// Default custom tests
+const defaultCustomTests = [
+  {
+    name: 'Todo list exists',
+    test: function(doc) { 
+      return doc.getElementById('todo-list') !== null;
+    },
+    weight: 10
+  },
+  {
+    name: 'Add button exists',
+    test: function(doc) { 
+      return doc.getElementById('add-button') !== null;
+    },
+    weight: 10
+  },
+  {
+    name: 'Can add a new item',
+    test: function(doc) {
+      const input = doc.getElementById('todo-input');
+      const button = doc.getElementById('add-button');
+      const list = doc.getElementById('todo-list');
+      if (!input || !button || !list) return false;
+      
+      // Count initial items
+      const initialCount = list.children.length;
+      
+      // Simulate adding a new item
+      input.value = 'Test item';
+      button.click();
+      
+      // Check if a new item was added
+      return list.children.length > initialCount;
+    },
+    weight: 40
+  },
+  {
+    name: 'Delete button works',
+    test: function(doc) {
+      const list = doc.getElementById('todo-list');
+      if (!list || list.children.length === 0) return false;
+      
+      // Get the first todo item
+      const item = list.children[0];
+      const deleteBtn = item.querySelector('button');
+      if (!deleteBtn) return false;
+      
+      // Count initial items
+      const initialCount = list.children.length;
+      
+      // Click delete button
+      deleteBtn.click();
+      
+      // Check if item was removed
+      return list.children.length < initialCount;
+    },
+    weight: 40
+  }
+];
 
 // Load default code in solution editor
 solutionHtmlEditor.value = DEFAULT_HTML.trim();
@@ -535,16 +600,38 @@ async function runVisualTest() {
     const visualScore = Math.round((pixelMatchScore + resembleScore) / 2);
     console.log('Average visual similarity score:', visualScore + '%');
     
-    // Functional test (now non-visible)
-    const functionalScore = await testE2EFunctionality();
-    console.log('Functional test score:', functionalScore + '%');
+    // Check if we should use custom tests
+    const useCustomScoreCheckbox = document.getElementById('use-custom-tests-score');
+    let functionalScore = 0;
+    
+    if (useCustomScoreCheckbox && useCustomScoreCheckbox.checked) {
+      // Run custom tests and use their score
+      await runCustomTests();
+      // The custom test function will update the functionalScoreElement
+      // We'll just need to get the value for total score calculation
+      const scoreText = functionalScoreElement.textContent;
+      functionalScore = parseInt(scoreText, 10) || 0;
+    } else {
+      // Functional test (default)
+      functionalScore = await testE2EFunctionality();
+      console.log('Functional test score:', functionalScore + '%');
+      
+      // Update functional score display
+      functionalScoreElement.textContent = functionalScore + '%';
+      applyScoreColor(functionalScoreElement, functionalScore);
+    }
+    
+    // Update visual score display
+    visualScoreElement.textContent = visualScore + '%';
+    applyScoreColor(visualScoreElement, visualScore);
     
     // Calculate total score (40% visual, 60% functional)
     const totalScore = Math.round(visualScore * 0.4 + functionalScore * 0.6);
     console.log('Total score:', totalScore + '%');
     
-    // Update score displays
-    updateScoreDisplay(visualScore, functionalScore, totalScore);
+    // Update total score display
+    totalScoreElement.textContent = totalScore + '%';
+    applyScoreColor(totalScoreElement, totalScore);
     
     console.log('Visual regression test completed successfully');
     showToast('Testing completed successfully');
@@ -561,32 +648,16 @@ async function runVisualTest() {
   }
 }
 
-// Helper function to update score display
-function updateScoreDisplay(visualScore, functionalScore, totalScore) {
-  const visualScoreElement = document.getElementById('visual-score');
-  const functionalScoreElement = document.getElementById('functional-score');
-  const totalScoreElement = document.getElementById('total-score');
-  
+// Helper function to update score display (renamed from updateScoreDisplay)
+function updateAllScores(visualScore, functionalScore, totalScore) {
   if (visualScoreElement) visualScoreElement.textContent = `${visualScore}%`;
   if (functionalScoreElement) functionalScoreElement.textContent = `${functionalScore}%`;
   if (totalScoreElement) totalScoreElement.textContent = `${totalScore}%`;
   
   // Apply color coding based on scores
-  [
-    { element: visualScoreElement, score: visualScore },
-    { element: functionalScoreElement, score: functionalScore },
-    { element: totalScoreElement, score: totalScore }
-  ].forEach(({ element, score }) => {
-    if (element) {
-      if (score >= 80) {
-        element.style.color = '#2ecc71';
-      } else if (score >= 60) {
-        element.style.color = '#f39c12';
-      } else {
-        element.style.color = '#e74c3c';
-      }
-    }
-  });
+  if (visualScoreElement) applyScoreColor(visualScoreElement, visualScore);
+  if (functionalScoreElement) applyScoreColor(functionalScoreElement, functionalScore);
+  if (totalScoreElement) applyScoreColor(totalScoreElement, totalScore);
 }
 
 // Helper function to create a full HTML document
@@ -1020,6 +1091,251 @@ function setupTooltips() {
   });
 }
 
+// Load saved tests or set defaults
+function loadCustomTests() {
+  try {
+    const savedTests = localStorage.getItem('customTests');
+    if (savedTests) {
+      customTestsEditor.value = savedTests;
+    } else {
+      // Convert the default tests to a string representation with functions
+      const testsString = defaultCustomTests.map(test => {
+        // Convert each test object to a string with function intact
+        const funcStr = test.test.toString();
+        console.log(funcStr);
+        return `  {
+    name: ${JSON.stringify(test.name)},
+    test: ${funcStr},
+    weight: ${test.weight}
+  }`;
+      }).join(',\n');
+      
+      // Format as a proper array
+      customTestsEditor.value = `[\n${testsString}\n]`;
+    }
+  } catch (error) {
+    console.error('Error loading custom tests:', error);
+    // Fallback for errors
+    const fallbackTests = `[
+  {
+    name: "Todo list exists",
+    test: function(doc) { 
+      return doc.getElementById('todo-list') !== null;
+    },
+    weight: 10
+  },
+  {
+    name: "Add button exists",
+    test: function(doc) { 
+      return doc.getElementById('add-button') !== null;
+    },
+    weight: 10
+  }
+]`;
+    customTestsEditor.value = fallbackTests;
+  }
+}
+
+// Save custom tests to localStorage
+function saveCustomTests() {
+  try {
+    localStorage.setItem('customTests', customTestsEditor.value);
+    showToast('Custom tests saved successfully');
+  } catch (error) {
+    console.error('Error saving custom tests:', error);
+    showToast('Error saving custom tests: ' + error.message, 'error');
+  }
+}
+
+// Parse custom tests from editor
+function parseCustomTests() {
+  try {
+    // Use Function constructor to safely evaluate the JSON with functions
+    const testFunctionsString = `return ${customTestsEditor.value}`;
+    const testFunctions = new Function(testFunctionsString)();
+    
+    // Validate the structure
+    if (!Array.isArray(testFunctions)) {
+      throw new Error('Custom tests must be an array of objects');
+    }
+    
+    // Validate each test
+    testFunctions.forEach((test, index) => {
+      if (!test.name || typeof test.name !== 'string') {
+        throw new Error(`Test #${index + 1} is missing a valid name property`);
+      }
+      if (!test.test || typeof test.test !== 'function') {
+        throw new Error(`Test "${test.name}" is missing a valid test function property`);
+      }
+      if (typeof test.weight !== 'number' || test.weight <= 0) {
+        throw new Error(`Test "${test.name}" must have a positive numeric weight property`);
+      }
+    });
+    
+    return testFunctions;
+  } catch (error) {
+    console.error('Error parsing custom tests:', error);
+    showToast('Error parsing custom tests: ' + error.message, 'error');
+    return null;
+  }
+}
+
+// Run custom tests on the user iframe
+async function runCustomTests() {
+  // Show loading on button
+  const customTestButton = document.getElementById('run-custom-tests-btn');
+  if (customTestButton) {
+    customTestButton.textContent = 'Running Tests...';
+    customTestButton.disabled = true;
+  }
+  
+  try {
+    const userOutputFrame = document.getElementById('user-output');
+    if (!userOutputFrame || !userOutputFrame.contentDocument) {
+      showToast('User output frame not found or not loaded. Run your code first.', 'error');
+      return;
+    }
+    
+    const tests = parseCustomTests();
+    if (!tests) {
+      return; // Error already shown
+    }
+    
+    const userDoc = userOutputFrame.contentDocument;
+    
+    // Create or get test results container
+    let resultsContainer = document.getElementById('custom-test-results');
+    if (!resultsContainer) {
+      resultsContainer = document.createElement('div');
+      resultsContainer.id = 'custom-test-results';
+      resultsContainer.className = 'test-results-container';
+      
+      // Add it after the custom tests section
+      const customTestsSection = document.getElementById('custom-tests-section');
+      customTestsSection.appendChild(resultsContainer);
+    }
+    
+    // Clear previous results
+    resultsContainer.innerHTML = '';
+    
+    // Add header
+    const header = document.createElement('div');
+    header.className = 'test-results-header';
+    header.innerHTML = '<span>Custom Test Results</span>';
+    resultsContainer.appendChild(header);
+    
+    // Run each test
+    let totalScore = 0;
+    let totalWeight = 0;
+    let testResults = [];
+    
+    for (const test of tests) {
+      const result = {
+        name: test.name,
+        weight: test.weight,
+        passed: false
+      };
+      
+      try {
+        // Run the test with the user's document
+        result.passed = test.test(userDoc);
+        
+        // Add to score if passed
+        if (result.passed) {
+          totalScore += test.weight;
+        }
+        
+        totalWeight += test.weight;
+      } catch (error) {
+        console.error(`Error running test "${test.name}":`, error);
+        result.error = error.message;
+        result.passed = false;
+      }
+      
+      testResults.push(result);
+      
+      // Create result item
+      const resultItem = document.createElement('div');
+      resultItem.className = `test-result-item ${result.passed ? 'success' : 'failure'}`;
+      
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'test-name';
+      nameSpan.textContent = test.name;
+      
+      const weightSpan = document.createElement('span');
+      weightSpan.className = 'test-weight';
+      weightSpan.textContent = `(${test.weight} points)`;
+      
+      const statusSpan = document.createElement('span');
+      statusSpan.className = `test-status ${result.passed ? 'success' : 'failure'}`;
+      statusSpan.textContent = result.passed ? 'PASSED' : 'FAILED';
+      
+      resultItem.appendChild(nameSpan);
+      nameSpan.appendChild(weightSpan);
+      resultItem.appendChild(statusSpan);
+      
+      resultsContainer.appendChild(resultItem);
+    }
+    
+    // Calculate and display final score
+    const finalScore = totalWeight > 0 ? Math.round((totalScore / totalWeight) * 100) : 0;
+    
+    // Create score summary
+    const scoreSummary = document.createElement('div');
+    scoreSummary.className = 'test-result-item';
+    scoreSummary.style.marginTop = '15px';
+    scoreSummary.style.fontWeight = 'bold';
+    scoreSummary.innerHTML = `
+      <span>Final Custom Test Score:</span>
+      <span>${totalScore} / ${totalWeight} (${finalScore}%)</span>
+    `;
+    resultsContainer.appendChild(scoreSummary);
+    
+    // Show results by expanding the section if collapsed
+    const customTestsSection = document.getElementById('custom-tests-section');
+    if (customTestsSection.classList.contains('collapsed')) {
+      const toggleBtn = document.querySelector('[data-target="custom-tests-section"]');
+      if (toggleBtn) toggleBtn.click();
+    }
+    
+    // Set functional score if used in place of the default testing
+    const useCustomScoreCheckbox = document.getElementById('use-custom-tests-score');
+    if (useCustomScoreCheckbox && useCustomScoreCheckbox.checked) {
+      functionalScoreElement.textContent = finalScore + '%';
+      applyScoreColor(functionalScoreElement, finalScore);
+      
+      // Recalculate total score
+      const visualScore = parseInt(visualScoreElement.textContent, 10) || 0;
+      const totalScore = Math.round(visualScore * 0.4 + finalScore * 0.6);
+      totalScoreElement.textContent = totalScore + '%';
+      applyScoreColor(totalScoreElement, totalScore);
+    }
+    
+    showToast(`Custom tests completed: ${finalScore}% score`);
+    
+  } catch (error) {
+    console.error('Error running custom tests:', error);
+    showToast('Error running custom tests: ' + error.message, 'error');
+  } finally {
+    // Restore button state
+    if (customTestButton) {
+      customTestButton.textContent = 'Run Custom Tests';
+      customTestButton.disabled = false;
+    }
+  }
+}
+
+// Apply color to score element based on value
+function applyScoreColor(element, score) {
+  if (score >= 80) {
+    element.style.color = '#2ecc71';
+  } else if (score >= 60) {
+    element.style.color = '#f39c12';
+  } else {
+    element.style.color = '#e74c3c';
+  }
+}
+
 // Initialize the application
 function initialize() {
   // Populate editors with sample code
@@ -1031,12 +1347,30 @@ function initialize() {
   // Setup tooltips
   setupTooltips();
   
+  // Load custom tests
+  loadCustomTests();
+  
   // Ensure all DOM elements are ready
   const diffCanvasElement = document.getElementById('diff-canvas');
   if (diffCanvasElement) {
     window.diffCanvas = diffCanvasElement; // Make it globally available
   } else {
     console.warn('Diff canvas element not found in the DOM');
+  }
+  
+  // Check if we should use custom tests
+  const useCustomScoreCheckbox = document.getElementById('use-custom-tests-score');
+  if (useCustomScoreCheckbox) {
+    // Load saved preference from localStorage if available
+    const savedPreference = localStorage.getItem('useCustomTests');
+    if (savedPreference !== null) {
+      useCustomScoreCheckbox.checked = savedPreference === 'true';
+    }
+    
+    // Save preference when changed
+    useCustomScoreCheckbox.addEventListener('change', function() {
+      localStorage.setItem('useCustomTests', this.checked);
+    });
   }
   
   // Load the solution code into the expected output iframe
@@ -1049,10 +1383,14 @@ function initialize() {
   const runButton = document.getElementById('run-btn');
   const testButton = document.getElementById('test-btn');
   const updateSolutionButton = document.getElementById('update-solution-btn');
+  const saveTestsButton = document.getElementById('save-tests-btn');
+  const runCustomTestsButton = document.getElementById('run-custom-tests-btn');
   
   if (runButton) runButton.addEventListener('click', runUserCode);
   if (testButton) testButton.addEventListener('click', runVisualTest);
   if (updateSolutionButton) updateSolutionButton.addEventListener('click', updateSolutionCode);
+  if (saveTestsButton) saveTestsButton.addEventListener('click', saveCustomTests);
+  if (runCustomTestsButton) runCustomTestsButton.addEventListener('click', runCustomTests);
 }
 
 // Initialize when the DOM is fully loaded

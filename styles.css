@@ -323,3 +323,128 @@ iframe {
 .tooltip-wrapper:hover .custom-tooltip {
   visibility: visible;
 }
+
+/* Custom Test Cases styles */
+.test-cases-container {
+  margin-top: 20px;
+  border-top: 1px solid #ddd;
+  padding-top: 20px;
+}
+
+.custom-tests-editor {
+  width: 100%;
+}
+
+.test-description {
+  background-color: #f8f9fa;
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  color: #555;
+}
+
+.test-description code {
+  background-color: #e9ecef;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: 'Courier New', Courier, monospace;
+  color: #333;
+}
+
+#custom-tests-editor {
+  width: 100%;
+  height: 300px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  resize: vertical;
+}
+
+#save-tests-btn {
+  background-color: #6c757d;
+  color: white;
+}
+
+#run-custom-tests-btn {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+/* Custom test results display */
+.test-results-container {
+  margin-top: 20px;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: #f8f9fa;
+}
+
+.test-results-header {
+  font-weight: bold;
+  font-size: 18px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.test-result-item {
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.test-result-item.success {
+  background-color: rgba(40, 167, 69, 0.1);
+  border-left: 4px solid #28a745;
+}
+
+.test-result-item.failure {
+  background-color: rgba(220, 53, 69, 0.1);
+  border-left: 4px solid #dc3545;
+}
+
+.test-name {
+  font-weight: 500;
+}
+
+.test-weight {
+  color: #6c757d;
+  font-size: 14px;
+  margin-left: 5px;
+}
+
+.test-status {
+  font-weight: bold;
+}
+
+.test-status.success {
+  color: #28a745;
+}
+
+.test-status.failure {
+  color: #dc3545;
+}
+
+.custom-test-options {
+  margin-top: 15px;
+  padding: 10px 0;
+  border-top: 1px solid #eee;
+}
+
+.custom-test-options label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 14px;
+  color: #555;
+}
+
+.custom-test-options input[type="checkbox"] {
+  margin-right: 8px;
+}

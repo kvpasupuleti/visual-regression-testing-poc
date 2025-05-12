@@ -90,6 +90,94 @@
         </div>
       </div>
 
+      <!-- New Custom Test Cases Section -->
+      <div class="editor-container test-cases-container">
+        <div class="section-header">
+          <h2>Custom Functional Tests</h2>
+          <button class="toggle-btn" data-target="custom-tests-section">
+            Toggle
+          </button>
+        </div>
+        <div id="custom-tests-section" class="collapsible-section">
+          <div class="custom-tests-editor">
+            <div class="test-description">
+              <p>Add custom functional test cases to evaluate specific behaviors. Each test should have a name, weight, and a test function that returns true if the test passes, false otherwise.</p>
+              <p>Example: <code>{"name": "Element exists", "test": function(doc) { return doc.getElementById('my-element') !== null; }, "weight": 10}</code></p>
+            </div>
+            <textarea id="custom-tests-editor" placeholder="// Add custom test functions here...
+// Each test object must have a name, test function, and weight
+[
+  {
+    name: 'Todo list exists',
+    test: function(doc) { 
+      return doc.getElementById('todo-list') !== null;
+    },
+    weight: 10
+  },
+  {
+    name: 'Add button exists',
+    test: function(doc) { 
+      return doc.getElementById('add-button') !== null;
+    },
+    weight: 10
+  },
+  {
+    name: 'Can add a new item',
+    test: function(doc) {
+      const input = doc.getElementById('todo-input');
+      const button = doc.getElementById('add-button');
+      const list = doc.getElementById('todo-list');
+      if (!input || !button || !list) return false;
+      
+      // Count initial items
+      const initialCount = list.children.length;
+      
+      // Simulate adding a new item
+      input.value = 'Test item';
+      button.click();
+      
+      // Check if a new item was added
+      return list.children.length > initialCount;
+    },
+    weight: 40
+  },
+  {
+    name: 'Delete button works',
+    test: function(doc) {
+      const list = doc.getElementById('todo-list');
+      if (!list || list.children.length === 0) return false;
+      
+      // Get the first todo item
+      const item = list.children[0];
+      const deleteBtn = item.querySelector('button');
+      if (!deleteBtn) return false;
+      
+      // Count initial items
+      const initialCount = list.children.length;
+      
+      // Click delete button
+      deleteBtn.click();
+      
+      // Check if item was removed
+      return list.children.length < initialCount;
+    },
+    weight: 40
+  }
+]"></textarea>
+          </div>
+          <div class="buttons">
+            <button id="save-tests-btn">Save Custom Tests</button>
+            <button id="run-custom-tests-btn">Run Custom Tests</button>
+          </div>
+          <div class="custom-test-options">
+            <label>
+              <input type="checkbox" id="use-custom-tests-score" checked>
+              Use custom tests for functional score
+            </label>
+          </div>
+        </div>
+      </div>
+
       <div class="output-container">
         <div class="preview-section">
           <h3>User Output</h3>
