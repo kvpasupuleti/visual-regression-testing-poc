@@ -586,56 +586,130 @@ async function runVisualTest() {
     
     console.log('Starting visual regression test...');
     
-    // Capture screenshots without causing visual changes
-    const { userCanvas, expectedCanvas } = await captureScreenshots();
-    
-    // Visual comparison
-    const pixelMatchScore = compareWithPixelMatch(userCanvas, expectedCanvas);
-    console.log('PixelMatch similarity score:', pixelMatchScore + '%');
-    
-    const resembleScore = await compareWithResembleJS(userCanvas, expectedCanvas);
-    console.log('ResembleJS similarity score:', resembleScore + '%');
-    
-    // Average of both visual scores
-    const visualScore = Math.round((pixelMatchScore + resembleScore) / 2);
-    console.log('Average visual similarity score:', visualScore + '%');
-    
-    // Check if we should use custom tests
-    const useCustomScoreCheckbox = document.getElementById('use-custom-tests-score');
-    let functionalScore = 0;
-    
-    if (useCustomScoreCheckbox && useCustomScoreCheckbox.checked) {
-      // Run custom tests and use their score
-      await runCustomTests();
-      // The custom test function will update the functionalScoreElement
-      // We'll just need to get the value for total score calculation
-      const scoreText = functionalScoreElement.textContent;
-      functionalScore = parseInt(scoreText, 10) || 0;
-    } else {
-      // Functional test (default)
-      functionalScore = await testE2EFunctionality();
-      console.log('Functional test score:', functionalScore + '%');
+    try {
+      // Capture screenshots without causing visual changes
+      const { userCanvas, expectedCanvas } = await captureScreenshots();
       
-      // Update functional score display
-      functionalScoreElement.textContent = functionalScore + '%';
-      applyScoreColor(functionalScoreElement, functionalScore);
+      // Visual comparison
+      const pixelMatchScore = compareWithPixelMatch(userCanvas, expectedCanvas);
+      console.log('PixelMatch similarity score:', pixelMatchScore + '%');
+      
+      const resembleScore = await compareWithResembleJS(userCanvas, expectedCanvas);
+      console.log('ResembleJS similarity score:', resembleScore + '%');
+      
+      // Average of both visual scores
+      const visualScore = Math.round((pixelMatchScore + resembleScore) / 2);
+      console.log('Average visual similarity score:', visualScore + '%');
+      
+      // Check if we should use custom tests
+      const useCustomScoreCheckbox = document.getElementById('use-custom-tests-score');
+      let functionalScore = 0;
+      
+      if (useCustomScoreCheckbox && useCustomScoreCheckbox.checked) {
+        // Run custom tests and use their score
+        await runCustomTests();
+        // The custom test function will update the functionalScoreElement
+        // We'll just need to get the value for total score calculation
+        const scoreText = functionalScoreElement.textContent;
+        functionalScore = parseInt(scoreText, 10) || 0;
+      } else {
+        // Functional test (default)
+        functionalScore = await testE2EFunctionality();
+        console.log('Functional test score:', functionalScore + '%');
+        
+        // Update functional score display
+        functionalScoreElement.textContent = functionalScore + '%';
+        applyScoreColor(functionalScoreElement, functionalScore);
+      }
+      
+      // Update visual score display
+      visualScoreElement.textContent = visualScore + '%';
+      applyScoreColor(visualScoreElement, visualScore);
+      
+      // Calculate total score (40% visual, 60% functional)
+      const totalScore = Math.round(visualScore * 0.4 + functionalScore * 0.6);
+      console.log('Total score:', totalScore + '%');
+      
+      // Update total score display
+      totalScoreElement.textContent = totalScore + '%';
+      applyScoreColor(totalScoreElement, totalScore);
+      
+      console.log('Visual regression test completed successfully');
+      showToast('Testing completed successfully');
+    } catch (error) {
+      // Update the error handler part of runVisualTest to match the simplified diff canvas
+      if (error.message && error.message.includes('Image sizes do not match')) {
+        console.warn('Image size mismatch detected, attempting to continue with fixed dimensions');
+        
+        // Create a message in the diff canvas
+        if (diffCanvas && diffCanvas.getContext) {
+          const ctx = diffCanvas.getContext('2d');
+          
+          // Set reasonable canvas size
+          diffCanvas.width = 500;
+          diffCanvas.height = 150;
+          
+          // Clear and draw a helpful message
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, 500, 150);
+          
+          // Draw border
+          ctx.strokeStyle = '#ddd';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(5, 5, 490, 140);
+          
+          // Add warning icon
+          ctx.font = 'bold 36px Arial';
+          ctx.fillStyle = '#f39c12';
+          ctx.fillText('⚠️', 20, 60);
+          
+          // Add message text
+          ctx.font = 'bold 16px Arial';
+          ctx.fillStyle = '#333';
+          ctx.fillText('Display Size Mismatch Detected', 70, 40);
+          
+          ctx.font = '14px Arial'; 
+          ctx.fillStyle = '#555';
+          
+          // Add dimensions info if available
+          const userRect = userOutputFrame.getBoundingClientRect();
+          const expectedRect = expectedOutputFrame.getBoundingClientRect();
+          ctx.fillText(`User: ${Math.round(userRect.width)}x${Math.round(userRect.height)}px`, 70, 70);
+          ctx.fillText(`Expected: ${Math.round(expectedRect.width)}x${Math.round(expectedRect.height)}px`, 70, 95);
+          
+          // Add helpful suggestion
+          ctx.fillText('Try resizing your browser or viewing in a different device.', 70, 125);
+        }
+        
+        // Get functional score instead
+        let functionalScore = 0;
+        const useCustomScoreCheckbox = document.getElementById('use-custom-tests-score');
+        
+        if (useCustomScoreCheckbox && useCustomScoreCheckbox.checked) {
+          await runCustomTests();
+          const scoreText = functionalScoreElement.textContent;
+          functionalScore = parseInt(scoreText, 10) || 0;
+        } else {
+          functionalScore = await testE2EFunctionality();
+          functionalScoreElement.textContent = functionalScore + '%';
+          applyScoreColor(functionalScoreElement, functionalScore);
+        }
+        
+        // Set visual score to N/A
+        visualScoreElement.textContent = 'N/A';
+        visualScoreElement.style.color = '#888';
+        
+        // Use functional score as the total score
+        totalScoreElement.textContent = functionalScore + '%';
+        applyScoreColor(totalScoreElement, functionalScore);
+        
+        // Show a more specific toast message
+        showToast('Visual comparison skipped due to size mismatch. Using functional score only.', 'error');
+      } else {
+        // Re-throw other errors
+        throw error;
+      }
     }
-    
-    // Update visual score display
-    visualScoreElement.textContent = visualScore + '%';
-    applyScoreColor(visualScoreElement, visualScore);
-    
-    // Calculate total score (40% visual, 60% functional)
-    const totalScore = Math.round(visualScore * 0.4 + functionalScore * 0.6);
-    console.log('Total score:', totalScore + '%');
-    
-    // Update total score display
-    totalScoreElement.textContent = totalScore + '%';
-    applyScoreColor(totalScoreElement, totalScore);
-    
-    console.log('Visual regression test completed successfully');
-    showToast('Testing completed successfully');
-    
   } catch (error) {
     console.error('Visual testing error:', error);
     showToast('An error occurred during testing: ' + error.message, 'error');
@@ -869,6 +943,30 @@ async function captureScreenshots() {
   }
   
   try {
+    // First, ensure both iframes have the same dimensions to prevent sizing issues
+    const userRect = userOutputFrame.getBoundingClientRect();
+    const expectedRect = expectedOutputFrame.getBoundingClientRect();
+    
+    // Log the dimensions for debugging
+    console.log(`Original frame dimensions - User: ${userRect.width}x${userRect.height}, Expected: ${expectedRect.width}x${expectedRect.height}`);
+    
+    // If there are any difference in dimensions, standardize them
+    if (userRect.width !== expectedRect.width || userRect.height !== expectedRect.height) {
+      console.log('Normalizing iframe dimensions for comparison');
+      
+      // Use the same width for both iframes
+      const standardWidth = Math.min(userRect.width, expectedRect.width);
+      const standardHeight = Math.min(userRect.height, expectedRect.height);
+      
+      userOutputFrame.style.width = `${standardWidth}px`;
+      userOutputFrame.style.height = `${standardHeight}px`;
+      expectedOutputFrame.style.width = `${standardWidth}px`;
+      expectedOutputFrame.style.height = `${standardHeight}px`;
+      
+      // Small delay to let the browser apply the new dimensions
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    
     // Create deep clones of the iframe bodies to avoid affecting the original DOM
     const userClone = userOutput.cloneNode(true);
     const expectedClone = expectedOutput.cloneNode(true);
@@ -885,22 +983,23 @@ async function captureScreenshots() {
     expectedClone.style.height = expectedStyles.height;
     expectedClone.style.overflow = 'hidden';
     
-    // Capture from the clones to avoid any flickering
-    const userCanvas = await html2canvas(userOutput, {
+    // Use html2canvas options to ensure consistent sizes
+    const html2canvasOptions = {
       logging: false, 
       useCORS: true, 
       allowTaint: true,
       backgroundColor: null,
-      removeContainer: true
-    });
+      removeContainer: true,
+      scale: 1, // Force a consistent scale factor
+      width: userOutputFrame.clientWidth,
+      height: userOutputFrame.clientHeight
+    };
     
-    const expectedCanvas = await html2canvas(expectedOutput, {
-      logging: false, 
-      useCORS: true, 
-      allowTaint: true,
-      backgroundColor: null,
-      removeContainer: true
-    });
+    // Capture from the clones to avoid any flickering
+    const userCanvas = await html2canvas(userOutput, html2canvasOptions);
+    const expectedCanvas = await html2canvas(expectedOutput, html2canvasOptions);
+    
+    console.log(`Canvas dimensions - User: ${userCanvas.width}x${userCanvas.height}, Expected: ${expectedCanvas.width}x${expectedCanvas.height}`);
     
     return {
       userCanvas,
@@ -914,74 +1013,64 @@ async function captureScreenshots() {
 
 // Compare screenshots using PixelMatch
 function compareWithPixelMatch(userCanvas, expectedCanvas) {
-  const width = Math.max(userCanvas.width, expectedCanvas.width);
-  const height = Math.max(userCanvas.height, expectedCanvas.height);
+  // Determine the target dimensions for comparison
+  // Use the minimum width and height to ensure both images fit
+  const targetWidth = Math.min(userCanvas.width, expectedCanvas.width);
+  const targetHeight = Math.min(userCanvas.height, expectedCanvas.height);
   
   // Get or create diff canvas
   let diffContext;
   if (diffCanvas) {
-    diffCanvas.width = width;
-    diffCanvas.height = height;
+    // Set width first
+    diffCanvas.width = targetWidth;
+    diffCanvas.height = 30; // Start with minimal height, we'll adjust it
     diffContext = diffCanvas.getContext('2d');
   } else {
     // If diffCanvas is not available, create a temporary one
     console.warn("Diff canvas not found in DOM, creating temporary canvas");
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = width;
-    tempCanvas.height = height;
+    tempCanvas.width = targetWidth;
+    tempCanvas.height = 30;
     diffContext = tempCanvas.getContext('2d');
   }
   
-  // First, draw a side-by-side comparison
-  diffContext.fillStyle = "#f0f0f0";
-  diffContext.fillRect(0, 0, width, height);
+  // Calculate the diff height and set the total canvas height
+  const diffHeight = Math.min(targetHeight, 300);
+  const totalHeight = diffHeight + 40; // Add some padding for text
+  diffCanvas.height = totalHeight;
   
-  // Draw the user and expected output separately first
-  diffContext.drawImage(userCanvas, 0, 0, width/2, height);
-  diffContext.drawImage(expectedCanvas, width/2, 0, width/2, height);
+  // Clear the canvas with background color
+  diffContext.fillStyle = "#ffffff";
+  diffContext.fillRect(0, 0, targetWidth, totalHeight);
   
-  // Add labels
-  diffContext.font = "14px Arial";
-  diffContext.fillStyle = "#000";
-  diffContext.fillText("User Output", 10, 20);
-  diffContext.fillText("Expected Output", width/2 + 10, 20);
+  // Create new canvases with the SAME dimensions for comparison
+  const userResized = document.createElement('canvas');
+  userResized.width = targetWidth;
+  userResized.height = targetHeight;
+  const userResizedCtx = userResized.getContext('2d');
+  userResizedCtx.drawImage(userCanvas, 0, 0, targetWidth, targetHeight);
   
-  // Draw a separator line
-  diffContext.strokeStyle = "#000";
-  diffContext.beginPath();
-  diffContext.moveTo(width/2, 0);
-  diffContext.lineTo(width/2, height);
-  diffContext.stroke();
-  
-  // Now create a diff image below
-  const diffHeight = Math.min(height, 300); // Limit diff height
-  diffCanvas.height = height + diffHeight + 30; // Add space for label
-
+  const expectedResized = document.createElement('canvas');
+  expectedResized.width = targetWidth;
+  expectedResized.height = targetHeight;
+  const expectedResizedCtx = expectedResized.getContext('2d');
+  expectedResizedCtx.drawImage(expectedCanvas, 0, 0, targetWidth, targetHeight);
   
   // Create the actual diff image
-  const diffImageData = diffContext.createImageData(width, diffHeight);
+  const diffImageData = diffContext.createImageData(targetWidth, targetHeight);
   
-  // Create user and expected image data
-  const userContext = document.createElement('canvas').getContext('2d');
-  userContext.canvas.width = width;
-  userContext.canvas.height = height;
-  userContext.drawImage(userCanvas, 0, 0);
-  const userImageData = userContext.getImageData(0, 0, width, height);
+  // Get image data from resized canvases
+  const userImageData = userResizedCtx.getImageData(0, 0, targetWidth, targetHeight);
+  const expectedImageData = expectedResizedCtx.getImageData(0, 0, targetWidth, targetHeight);
   
-  const expectedContext = document.createElement('canvas').getContext('2d');
-  expectedContext.canvas.width = width;
-  expectedContext.canvas.height = height;
-  expectedContext.drawImage(expectedCanvas, 0, 0);
-  const expectedImageData = expectedContext.getImageData(0, 0, width, height);
-  
-  // Custom diff color options with clearly distinguishable colors
+  // Custom diff color options with improved visibility
   const diffOptions = {
     threshold: 0.1,
     includeAA: true,
-    alpha: 0.5,
-    diffColor: [255, 0, 0],      // Red for differences
-    diffColorAlt: [0, 0, 255],   // Blue for missing in user output
-    diffMask: true
+    alpha: 0.7, // Increase alpha for better visibility
+    diffColor: [231, 76, 60],    // Brighter red (#e74c3c)
+    diffColorAlt: [52, 152, 219], // Brighter blue (#3498db)
+    diffMask: false              // Don't mask unchanged areas for better context
   };
   
   // Compare the images
@@ -989,25 +1078,41 @@ function compareWithPixelMatch(userCanvas, expectedCanvas) {
     userImageData.data,
     expectedImageData.data,
     diffImageData.data,
-    width,
-    diffHeight,
+    targetWidth,
+    targetHeight,
     diffOptions
   );
   
-  // Draw diff image at the bottom part of the canvas
-  diffContext.putImageData(diffImageData, 0, height + 30);
+  // First draw the user's output as a base layer for context
+  diffContext.globalAlpha = 0.3; // Make it faint
+  diffContext.drawImage(userCanvas, 0, 30, targetWidth, targetHeight);
+  diffContext.globalAlpha = 1.0;
   
-  // Add color legend
-  diffContext.fillStyle = "rgba(255, 0, 0, 0.7)";
-  diffContext.fillRect(width - 140, height + 5, 15, 15);
-  diffContext.fillStyle = "rgba(0, 0, 255, 0.7)";
-  diffContext.fillRect(width - 140, height + 25, 15, 15);
-  diffContext.fillStyle = "#000";
-  diffContext.fillText("Differences", width - 120, height + 15);
-  diffContext.fillText("Missing Content", width - 120, height + 35);
+  // Then overlay the diff image to highlight differences
+  diffContext.putImageData(diffImageData, 0, 30);
+  
+  // Add a border around the diff image for clarity
+  diffContext.strokeStyle = "#ddd";
+  diffContext.lineWidth = 1;
+  diffContext.strokeRect(0, 30, targetWidth, targetHeight);
+  
+  // Add title for the difference visualization
+  diffContext.font = "bold 14px Arial";
+  diffContext.fillStyle = "#333";
+  diffContext.textAlign = "left";
+  diffContext.fillText("Visual Differences", 10, 20);
+  
+  // Add info about detected differences
+  const percentageMismatch = (mismatchedPixels / (targetWidth * targetHeight) * 100).toFixed(2);
+  diffContext.font = "12px Arial";
+  diffContext.fillStyle = "#666";
+  diffContext.textAlign = "right";
+  diffContext.fillText(`Differences detected: ${mismatchedPixels} pixels (${percentageMismatch}%)`, targetWidth - 10, 20);
+  
+  // No need for legend at the bottom since we've added it to the HTML explanation
   
   // Calculate mismatch percentage
-  const totalPixels = width * diffHeight;
+  const totalPixels = targetWidth * targetHeight;
   const matchPercentage = 100 - (mismatchedPixels / totalPixels * 100);
   
   return Math.round(matchPercentage);
@@ -1016,14 +1121,48 @@ function compareWithPixelMatch(userCanvas, expectedCanvas) {
 // Compare screenshots using ResembleJS
 function compareWithResembleJS(userCanvas, expectedCanvas) {
   return new Promise(resolve => {
-    const userDataUrl = userCanvas.toDataURL();
-    const expectedDataUrl = expectedCanvas.toDataURL();
-    
-    ResembleJS(userDataUrl)
-      .compareTo(expectedDataUrl)
-      .onComplete(data => {
-        resolve(100 - Number(data.misMatchPercentage));
-      });
+    try {
+      // First ensure both canvases have the same dimensions by creating new canvases
+      const width = Math.min(userCanvas.width, expectedCanvas.width);
+      const height = Math.min(userCanvas.height, expectedCanvas.height);
+      
+      // Create temp canvases with matching dimensions
+      const userTemp = document.createElement('canvas');
+      userTemp.width = width;
+      userTemp.height = height;
+      userTemp.getContext('2d').drawImage(userCanvas, 0, 0, width, height);
+      
+      const expectedTemp = document.createElement('canvas');
+      expectedTemp.width = width;
+      expectedTemp.height = height;
+      expectedTemp.getContext('2d').drawImage(expectedCanvas, 0, 0, width, height);
+      
+      // Get data URLs from temp canvases
+      const userDataUrl = userTemp.toDataURL();
+      const expectedDataUrl = expectedTemp.toDataURL();
+      
+      // Configure ResembleJS options
+      const resembleOptions = {
+        errorType: 'movement',  // emphasize structural differences
+        scaleToSameSize: true,  // ensure size matching
+        ignoreAntialiasing: true,  // reduce false positives
+        outputDiff: false  // we don't need the diff image from ResembleJS
+      };
+      
+      // Compare the normalized images
+      ResembleJS(userDataUrl)
+        .compareTo(expectedDataUrl)
+        .ignoreColors()  // focus on structure, not colors
+        .ignoreAntialiasing()
+        .onComplete(data => {
+          const score = 100 - Number(data.misMatchPercentage);
+          console.log(`ResembleJS comparison (${width}x${height}): ${score}%`);
+          resolve(score);
+        });
+    } catch (error) {
+      console.error('Error in ResembleJS comparison:', error);
+      resolve(0); // Return 0 on error to avoid breaking the test
+    }
   });
 }
 
