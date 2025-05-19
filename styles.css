@@ -152,15 +152,17 @@ button:hover {
   font-weight: bold;
 }
 
-/* Updated diff container styles for better clarity */
+/* Updated diff container styles for full page comparison */
 .diff-container {
   padding: 15px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  text-align: center;
   background-color: #f9f9f9;
   margin-top: 20px;
-  overflow: auto;
+  margin-bottom: 30px;
+  display: flex;
+  flex-direction: column;
+  max-height: 800px;
 }
 
 .diff-container h3 {
@@ -169,6 +171,7 @@ button:hover {
   color: #2c3e50;
   border-bottom: 1px solid #eee;
   padding-bottom: 8px;
+  flex-shrink: 0;
 }
 
 .diff-explanation {
@@ -181,6 +184,7 @@ button:hover {
   font-size: 14px;
   color: #333;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  flex-shrink: 0;
 }
 
 .diff-explanation p {
@@ -219,15 +223,47 @@ button:hover {
   font-weight: 500;
 }
 
+.diff-canvas-container {
+  position: relative;
+  overflow: auto;
+  flex-grow: 1;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin: 0 auto;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  max-height: 600px; /* Limit the height of the scrollable area */
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
 #diff-canvas {
   max-width: 100%;
   height: auto;
   display: block;
-  margin: 0 auto;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   background-color: white;
-  border: 1px solid #ddd;
+  object-fit: contain; /* Prevent image distortion */
+}
+
+/* Add explicit scrollbar styling for better visibility */
+.diff-canvas-container::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.diff-canvas-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
   border-radius: 4px;
+}
+
+.diff-canvas-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.diff-canvas-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
 /* Solution editor container */

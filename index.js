@@ -943,63 +943,126 @@ async function captureScreenshots() {
   }
   
   try {
-    // First, ensure both iframes have the same dimensions to prevent sizing issues
-    const userRect = userOutputFrame.getBoundingClientRect();
-    const expectedRect = expectedOutputFrame.getBoundingClientRect();
+    console.log("Preparing to capture screenshots...");
     
-    // Log the dimensions for debugging
-    console.log(`Original frame dimensions - User: ${userRect.width}x${userRect.height}, Expected: ${expectedRect.width}x${expectedRect.height}`);
+    // Temporarily resize iframes to show full content by setting a large height
+    const originalUserHeight = userOutputFrame.style.height;
+    const originalExpectedHeight = expectedOutputFrame.style.height;
     
-    // If there are any difference in dimensions, standardize them
-    if (userRect.width !== expectedRect.width || userRect.height !== expectedRect.height) {
-      console.log('Normalizing iframe dimensions for comparison');
-      
-      // Use the same width for both iframes
-      const standardWidth = Math.min(userRect.width, expectedRect.width);
-      const standardHeight = Math.min(userRect.height, expectedRect.height);
-      
-      userOutputFrame.style.width = `${standardWidth}px`;
-      userOutputFrame.style.height = `${standardHeight}px`;
-      expectedOutputFrame.style.width = `${standardWidth}px`;
-      expectedOutputFrame.style.height = `${standardHeight}px`;
-      
-      // Small delay to let the browser apply the new dimensions
-      await new Promise(resolve => setTimeout(resolve, 50));
+    // Step 1: Calculate the full height of the content in each iframe
+    const userContentHeight = Math.max(
+      userOutput.scrollHeight,
+      userOutput.offsetHeight,
+      userOutput.clientHeight,
+      userOutputFrame.contentDocument.documentElement.scrollHeight || 0,
+      userOutputFrame.contentDocument.documentElement.offsetHeight || 0,
+      userOutputFrame.contentDocument.documentElement.clientHeight || 0
+    );
+    
+    const expectedContentHeight = Math.max(
+      expectedOutput.scrollHeight,
+      expectedOutput.offsetHeight,
+      expectedOutput.clientHeight,
+      expectedOutputFrame.contentDocument.documentElement.scrollHeight || 0,
+      expectedOutputFrame.contentDocument.documentElement.offsetHeight || 0,
+      expectedOutputFrame.contentDocument.documentElement.clientHeight || 0
+    );
+    
+    console.log(`Full content heights - User: ${userContentHeight}px, Expected: ${expectedContentHeight}px`);
+    
+    // First create the canvas(es) at the correct size
+    const userCanvas = document.createElement('canvas');
+    const expectedCanvas = document.createElement('canvas');
+    
+    // Limit maximum height to prevent browser crashes with huge canvases
+    const maxHeight = 3000; 
+    const targetHeight = Math.min(Math.max(userContentHeight, expectedContentHeight), maxHeight);
+    
+    // Standardize width for comparison
+    const standardWidth = Math.min(
+      userOutputFrame.clientWidth, 
+      expectedOutputFrame.clientWidth
+    );
+    
+    // Set canvas dimensions
+    userCanvas.width = standardWidth;
+    userCanvas.height = targetHeight;
+    expectedCanvas.width = standardWidth;
+    expectedCanvas.height = targetHeight;
+    
+    console.log(`Canvas dimensions: ${standardWidth}x${targetHeight}`);
+    
+    // Create contexts
+    const userContext = userCanvas.getContext('2d');
+    const expectedContext = expectedCanvas.getContext('2d');
+    
+    // Set white background for both canvases
+    userContext.fillStyle = "#FFFFFF";
+    userContext.fillRect(0, 0, standardWidth, targetHeight);
+    expectedContext.fillStyle = "#FFFFFF";
+    expectedContext.fillRect(0, 0, standardWidth, targetHeight);
+    
+    // Adjust iframe sizes to show all content
+    userOutputFrame.style.width = standardWidth + 'px';
+    userOutputFrame.style.height = targetHeight + 'px';
+    expectedOutputFrame.style.width = standardWidth + 'px';
+    expectedOutputFrame.style.height = targetHeight + 'px';
+    
+    // Wait for resize to take effect
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Capture screenshots using html2canvas
+    console.log("Capturing user output...");
+    try {
+      await html2canvas(userOutput, {
+        canvas: userCanvas,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#FFFFFF",
+        scale: 1,
+        logging: false,
+        foreignObjectRendering: false,
+        removeContainer: true,
+        x: 0,
+        y: 0,
+        width: standardWidth,
+        height: targetHeight
+      });
+      console.log("User output captured");
+    } catch (error) {
+      console.error("Error capturing user output:", error);
+      throw new Error("Failed to capture user output: " + error.message);
     }
     
-    // Create deep clones of the iframe bodies to avoid affecting the original DOM
-    const userClone = userOutput.cloneNode(true);
-    const expectedClone = expectedOutput.cloneNode(true);
+    console.log("Capturing expected output...");
+    try {
+      await html2canvas(expectedOutput, {
+        canvas: expectedCanvas,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#FFFFFF",
+        scale: 1,
+        logging: false,
+        foreignObjectRendering: false,
+        removeContainer: true,
+        x: 0,
+        y: 0,
+        width: standardWidth,
+        height: targetHeight
+      });
+      console.log("Expected output captured");
+    } catch (error) {
+      console.error("Error capturing expected output:", error);
+      throw new Error("Failed to capture expected output: " + error.message);
+    }
     
-    // Give the clones the same styling as their original bodies
-    const userStyles = window.getComputedStyle(userOutput);
-    const expectedStyles = window.getComputedStyle(expectedOutput);
+    // Restore original iframe heights
+    userOutputFrame.style.width = '';
+    userOutputFrame.style.height = originalUserHeight;
+    expectedOutputFrame.style.width = '';
+    expectedOutputFrame.style.height = originalExpectedHeight;
     
-    userClone.style.width = userStyles.width;
-    userClone.style.height = userStyles.height;
-    userClone.style.overflow = 'hidden';
-    
-    expectedClone.style.width = expectedStyles.width;
-    expectedClone.style.height = expectedStyles.height;
-    expectedClone.style.overflow = 'hidden';
-    
-    // Use html2canvas options to ensure consistent sizes
-    const html2canvasOptions = {
-      logging: false, 
-      useCORS: true, 
-      allowTaint: true,
-      backgroundColor: null,
-      removeContainer: true,
-      scale: 1, // Force a consistent scale factor
-      width: userOutputFrame.clientWidth,
-      height: userOutputFrame.clientHeight
-    };
-    
-    // Capture from the clones to avoid any flickering
-    const userCanvas = await html2canvas(userOutput, html2canvasOptions);
-    const expectedCanvas = await html2canvas(expectedOutput, html2canvasOptions);
-    
-    console.log(`Canvas dimensions - User: ${userCanvas.width}x${userCanvas.height}, Expected: ${expectedCanvas.width}x${expectedCanvas.height}`);
+    console.log("Screenshots captured successfully");
     
     return {
       userCanvas,
@@ -1013,109 +1076,119 @@ async function captureScreenshots() {
 
 // Compare screenshots using PixelMatch
 function compareWithPixelMatch(userCanvas, expectedCanvas) {
-  // Determine the target dimensions for comparison
-  // Use the minimum width and height to ensure both images fit
-  const targetWidth = Math.min(userCanvas.width, expectedCanvas.width);
-  const targetHeight = Math.min(userCanvas.height, expectedCanvas.height);
-  
-  // Get or create diff canvas
-  let diffContext;
-  if (diffCanvas) {
-    // Set width first
-    diffCanvas.width = targetWidth;
-    diffCanvas.height = 30; // Start with minimal height, we'll adjust it
-    diffContext = diffCanvas.getContext('2d');
-  } else {
-    // If diffCanvas is not available, create a temporary one
-    console.warn("Diff canvas not found in DOM, creating temporary canvas");
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = targetWidth;
-    tempCanvas.height = 30;
-    diffContext = tempCanvas.getContext('2d');
+  try {
+    console.log("Starting visual comparison...");
+    
+    // Determine the target dimensions for comparison
+    // Use the minimum width and height to ensure both images fit
+    const targetWidth = Math.min(userCanvas.width, expectedCanvas.width);
+    const targetHeight = Math.min(userCanvas.height, expectedCanvas.height);
+    
+    console.log(`Canvas dimensions for comparison: ${targetWidth}x${targetHeight}`);
+    
+    // Get or create diff canvas
+    let diffContext;
+    if (diffCanvas) {
+      diffCanvas.width = targetWidth;
+      diffCanvas.height = targetHeight + 60; // Add space for header
+      diffContext = diffCanvas.getContext('2d');
+      console.log("Using existing diff canvas");
+    } else {
+      console.warn("Diff canvas not found in DOM, creating temporary canvas");
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = targetWidth;
+      tempCanvas.height = targetHeight + 60;
+      diffContext = tempCanvas.getContext('2d');
+    }
+    
+    // Clear the canvas with background color
+    diffContext.fillStyle = "#ffffff";
+    diffContext.fillRect(0, 0, targetWidth, targetHeight + 60);
+    
+    // Add header text
+    diffContext.font = "bold 14px Arial";
+    diffContext.fillStyle = "#333";
+    diffContext.textAlign = "left";
+    diffContext.fillText("Visual Differences (Full Page Comparison)", 10, 30);
+    
+    // Create a simple comparison
+    console.log("Preparing image data for comparison...");
+    
+    // Create image data from both canvases
+    const userImageData = userCanvas.getContext('2d').getImageData(0, 0, targetWidth, targetHeight);
+    const expectedImageData = expectedCanvas.getContext('2d').getImageData(0, 0, targetWidth, targetHeight);
+    const diffImageData = diffContext.createImageData(targetWidth, targetHeight);
+    
+    // Set diff options
+    const diffOptions = {
+      threshold: 0.15,
+      includeAA: true,
+      alpha: 0.8,
+      diffColor: [231, 76, 60],    // Brighter red (#e74c3c)
+      diffColorAlt: [52, 152, 219], // Brighter blue (#3498db)
+      diffMask: false
+    };
+    
+    // Compare the images
+    console.log("Running pixel comparison...");
+    const mismatchedPixels = pixelmatch(
+      userImageData.data,
+      expectedImageData.data,
+      diffImageData.data,
+      targetWidth,
+      targetHeight,
+      diffOptions
+    );
+    console.log(`Comparison complete. Found ${mismatchedPixels} mismatched pixels.`);
+    
+    // First draw a very faded version of the original for context
+    diffContext.globalAlpha = 0.2;
+    diffContext.drawImage(userCanvas, 0, 0, targetWidth, targetHeight, 0, 60, targetWidth, targetHeight);
+    diffContext.globalAlpha = 1.0;
+    
+    // Draw the diff data
+    console.log("Drawing diff visualization...");
+    diffContext.putImageData(diffImageData, 0, 60);
+    
+    // Calculate mismatch percentage
+    const totalPixels = targetWidth * targetHeight;
+    const matchPercentage = 100 - (mismatchedPixels / totalPixels * 100);
+    const percentageMismatch = (mismatchedPixels / totalPixels * 100).toFixed(2);
+    
+    // Add info about detected differences
+    diffContext.font = "12px Arial";
+    diffContext.fillStyle = "#666";
+    diffContext.textAlign = "right";
+    diffContext.fillText(`Differences detected: ${mismatchedPixels} pixels (${percentageMismatch}%)`, targetWidth - 10, 30);
+    
+    console.log("Visual comparison completed successfully");
+    return Math.round(matchPercentage);
+  } catch (error) {
+    console.error("ERROR IN VISUAL COMPARISON:", error);
+    
+    // Create a simple error display
+    if (diffCanvas) {
+      const ctx = diffCanvas.getContext('2d');
+      diffCanvas.width = 500;
+      diffCanvas.height = 200;
+      
+      ctx.fillStyle = "#fff0f0";
+      ctx.fillRect(0, 0, 500, 200);
+      
+      ctx.font = "bold 16px Arial";
+      ctx.fillStyle = "#e74c3c";
+      ctx.textAlign = "center";
+      ctx.fillText("Error in Visual Comparison", 250, 50);
+      
+      ctx.font = "14px Arial";
+      ctx.fillStyle = "#333";
+      ctx.textAlign = "center";
+      ctx.fillText(error.message, 250, 80);
+      ctx.fillText("Check browser console for details", 250, 110);
+    }
+    
+    return 0; // Return 0% match on error
   }
-  
-  // Calculate the diff height and set the total canvas height
-  const diffHeight = Math.min(targetHeight, 300);
-  const totalHeight = diffHeight + 40; // Add some padding for text
-  diffCanvas.height = totalHeight;
-  
-  // Clear the canvas with background color
-  diffContext.fillStyle = "#ffffff";
-  diffContext.fillRect(0, 0, targetWidth, totalHeight);
-  
-  // Create new canvases with the SAME dimensions for comparison
-  const userResized = document.createElement('canvas');
-  userResized.width = targetWidth;
-  userResized.height = targetHeight;
-  const userResizedCtx = userResized.getContext('2d');
-  userResizedCtx.drawImage(userCanvas, 0, 0, targetWidth, targetHeight);
-  
-  const expectedResized = document.createElement('canvas');
-  expectedResized.width = targetWidth;
-  expectedResized.height = targetHeight;
-  const expectedResizedCtx = expectedResized.getContext('2d');
-  expectedResizedCtx.drawImage(expectedCanvas, 0, 0, targetWidth, targetHeight);
-  
-  // Create the actual diff image
-  const diffImageData = diffContext.createImageData(targetWidth, targetHeight);
-  
-  // Get image data from resized canvases
-  const userImageData = userResizedCtx.getImageData(0, 0, targetWidth, targetHeight);
-  const expectedImageData = expectedResizedCtx.getImageData(0, 0, targetWidth, targetHeight);
-  
-  // Custom diff color options with improved visibility
-  const diffOptions = {
-    threshold: 0.1,
-    includeAA: true,
-    alpha: 0.7, // Increase alpha for better visibility
-    diffColor: [231, 76, 60],    // Brighter red (#e74c3c)
-    diffColorAlt: [52, 152, 219], // Brighter blue (#3498db)
-    diffMask: false              // Don't mask unchanged areas for better context
-  };
-  
-  // Compare the images
-  const mismatchedPixels = pixelmatch(
-    userImageData.data,
-    expectedImageData.data,
-    diffImageData.data,
-    targetWidth,
-    targetHeight,
-    diffOptions
-  );
-  
-  // First draw the user's output as a base layer for context
-  diffContext.globalAlpha = 0.3; // Make it faint
-  diffContext.drawImage(userCanvas, 0, 30, targetWidth, targetHeight);
-  diffContext.globalAlpha = 1.0;
-  
-  // Then overlay the diff image to highlight differences
-  diffContext.putImageData(diffImageData, 0, 30);
-  
-  // Add a border around the diff image for clarity
-  diffContext.strokeStyle = "#ddd";
-  diffContext.lineWidth = 1;
-  diffContext.strokeRect(0, 30, targetWidth, targetHeight);
-  
-  // Add title for the difference visualization
-  diffContext.font = "bold 14px Arial";
-  diffContext.fillStyle = "#333";
-  diffContext.textAlign = "left";
-  diffContext.fillText("Visual Differences", 10, 20);
-  
-  // Add info about detected differences
-  const percentageMismatch = (mismatchedPixels / (targetWidth * targetHeight) * 100).toFixed(2);
-  diffContext.font = "12px Arial";
-  diffContext.fillStyle = "#666";
-  diffContext.textAlign = "right";
-  diffContext.fillText(`Differences detected: ${mismatchedPixels} pixels (${percentageMismatch}%)`, targetWidth - 10, 20);
-  
-  // No need for legend at the bottom since we've added it to the HTML explanation
-  
-  // Calculate mismatch percentage
-  const totalPixels = targetWidth * targetHeight;
-  const matchPercentage = 100 - (mismatchedPixels / totalPixels * 100);
-  
-  return Math.round(matchPercentage);
 }
 
 // Compare screenshots using ResembleJS
