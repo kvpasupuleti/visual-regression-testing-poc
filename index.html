@@ -48,6 +48,13 @@
               <span class="loader"></span>
               Run Visual Test
             </button>
+            <button id="layout-compare-btn">Run Layout Compare Test</button>
+            <button id="run-all-btn" class="btn-with-loader">
+              <span class="loader"></span>
+              Run All Tests
+            </button>
+            <button id="display-outputs-btn">Display Viewport Outputs</button>
+            <button id="generate-viewport-diffs-btn">Generate Viewport Diffs</button>
           </div>
         </div>
       </div>
@@ -200,6 +207,28 @@
         </div>
       </div>
 
+      <div class="output-container">
+        <div class="preview-section">
+          <h3>User Layout</h3>
+          <div class="iframe-container">
+            <iframe
+              id="user-output-2"
+              sandbox="allow-scripts allow-same-origin"
+            ></iframe>
+          </div>
+        </div>
+
+        <div class="preview-section">
+          <h3>Expected Layout</h3>
+          <div class="iframe-container">
+            <iframe
+              id="expected-output-2"
+              sandbox="allow-scripts allow-same-origin"
+            ></iframe>
+          </div>
+        </div>
+      </div>
+
       <div id="results" class="results-container">
         <h2>Test Results</h2>
         <div class="score-display">
@@ -231,15 +260,27 @@
             </h3>
             <div id="functional-score" class="score">-</div>
           </div>
+          <div class="score-box layout-score">
+            <h3 class="score-box-title">
+              Layout Similarity
+              <div class="tooltip-wrapper">
+                <span class="info-icon">ⓘ</span>
+                <span class="custom-tooltip"
+                  >Measures how well your layout structure matches the expected output.
+                  Focuses on content positioning and structure, ignoring colors and styling.</span
+                >
+              </div>
+            </h3>
+            <div id="layout-score" class="score">-</div>
+          </div>
           <div class="score-box total-score">
             <h3 class="score-box-title">
               Total Score
               <div class="tooltip-wrapper">
                 <span class="info-icon">ⓘ</span>
                 <span class="custom-tooltip"
-                  >Combined score weighted as 40% visual similarity and 60%
-                  functional correctness. Represents overall solution
-                  quality.</span
+                  >Combined score weighted as 50% functional, 35% visual, and 15% layout.
+                  Represents overall solution quality across all dimensions.</span
                 >
               </div>
             </h3>
@@ -259,6 +300,23 @@
           </div>
           <div class="diff-canvas-container">
             <canvas id="diff-canvas"></canvas>
+          </div>
+        </div>
+
+        <div class="diff-container">
+          <h3>Layout Difference</h3>
+          <div class="diff-explanation">
+            <p>This visualization shows layout structure differences with normalized colors:</p>
+            <ul>
+              <li><span style="color: #888;">Grey areas</span>: Matching content structure</li>
+              <li><span style="color: #e74c3c;">Red areas</span>: Content in your layout not in expected</li>
+              <li><span style="color: #3498db;">Blue areas</span>: Content in expected layout not in yours</li>
+              <li><span style="color: #9b59b6;">Purple areas</span>: Different content in both layouts</li>
+            </ul>
+            <p>Focus on structural alignment and content positioning rather than visual styling.</p>
+          </div>
+          <div class="diff-canvas-container">
+            <canvas id="layout-diff-canvas"></canvas>
           </div>
         </div>
       </div>
