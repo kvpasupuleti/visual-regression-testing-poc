@@ -2748,8 +2748,7 @@ async function runAllTests() {
     console.log('Step 1: Running functional tests...');
     showToast('Running functional tests...', 'success');
     
-    const functionalResults = await testE2EFunctionality();
-    const functionalScore = functionalResults.score;
+    const functionalScore = await testE2EFunctionality();
     
     console.log('Functional test completed with score:', functionalScore + '%');
     functionalScoreElement.textContent = functionalScore + '%';
