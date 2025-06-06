@@ -499,17 +499,16 @@ function runUserLayoutCode() {
     const css = cssEditor.value;
     const js = jsEditor.value;
 
-    // Tr selectors that start with . (classes) or # (ansform the CSS using the transformCSS function
+    // Transform the CSS using the transformCSS function
     const transformedCSS = transformCSS(css);
 
-
-    // Create a complete HTML document with transformed CSS
-    const fullHtml = createFullHtml(html, transformedCSS, js);
+    // Create a complete HTML document with transformed CSS and image placeholders for layout
+    const fullHtml = createFullHtml(html, transformedCSS, js, true);
 
     // Set the HTML content using srcdoc
     userOutputFrame2.srcdoc = fullHtml;
 
-    console.log('User layout code executed successfully with transformed CSS');
+    console.log('User layout code executed successfully with transformed CSS and image placeholders');
   } catch (error) {
     console.error('Error running user layout code:', error);
   }
@@ -531,13 +530,13 @@ function updateSolutionLayoutCode() {
     // Transform the CSS using the transformCSS function
     const transformedCSS = transformCSS(css);
 
-    // Create a complete HTML document with transformed CSS
-    const fullHtml = createFullHtml(html, transformedCSS, js);
+    // Create a complete HTML document with transformed CSS and image placeholders for layout
+    const fullHtml = createFullHtml(html, transformedCSS, js, true);
 
     // Set the HTML content using srcdoc
     expectedOutputFrame2.srcdoc = fullHtml;
 
-    console.log('Solution layout code updated successfully with transformed CSS');
+    console.log('Solution layout code updated successfully with transformed CSS and image placeholders');
   } catch (error) {
     console.error('Error updating solution layout code:', error);
   }
@@ -1010,12 +1009,17 @@ function updateAllScores(visualScore, functionalScore, totalScore) {
 }
 
 // Helper function to create a full HTML document
-function createFullHtml(html, css, js) {
+function createFullHtml(html, css, js, forLayout = false) {
   // Extract body content from HTML if it exists
   let bodyContent = html;
   const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
   if (bodyMatch && bodyMatch[1]) {
     bodyContent = bodyMatch[1];
+  }
+
+  // If this is for layout comparison, replace all images with black and white placeholders
+  if (forLayout) {
+    bodyContent = replaceImagesForLayout(bodyContent);
   }
 
   return `
@@ -1024,6 +1028,33 @@ function createFullHtml(html, css, js) {
     <head>
       <meta charset="UTF-8">
       <style>${css}</style>
+      ${forLayout ? `
+      <style>
+        /* Layout comparison styles for image placeholders */
+        .layout-image-placeholder {
+          background: #000;
+          border: 2px solid #000;
+          display: inline-block;
+          min-width: 100px;
+          min-height: 100px;
+          position: relative;
+          vertical-align: top;
+        }
+        .layout-image-placeholder::after {
+          content: 'IMG';
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: #fff;
+          color: #000;
+          padding: 2px 6px;
+          font-size: 12px;
+          font-weight: bold;
+          border: 1px solid #000;
+        }
+      </style>
+      ` : ''}
     </head>
     <body>
       ${bodyContent}
@@ -1031,6 +1062,30 @@ function createFullHtml(html, css, js) {
     </body>
     </html>
   `;
+}
+
+// Function to replace images with black and white placeholders for layout comparison
+function replaceImagesForLayout(html) {
+  // Replace img tags with black and white placeholder spans
+  return html.replace(/<img[^>]*>/gi, (match) => {
+    // Extract width and height attributes if they exist
+    const widthMatch = match.match(/width\s*=\s*["']?(\d+)["']?/i);
+    const heightMatch = match.match(/height\s*=\s*["']?(\d+)["']?/i);
+    const classMatch = match.match(/class\s*=\s*["']([^"']*)["']/i);
+    const idMatch = match.match(/id\s*=\s*["']([^"']*)["']/i);
+    const styleMatch = match.match(/style\s*=\s*["']([^"']*)["']/i);
+    
+    let width = widthMatch ? widthMatch[1] + 'px' : '100px';
+    let height = heightMatch ? heightMatch[1] + 'px' : '100px';
+    let className = classMatch ? classMatch[1] : '';
+    let id = idMatch ? idMatch[1] : '';
+    let style = styleMatch ? styleMatch[1] : '';
+    
+    // Combine existing style with placeholder dimensions
+    const combinedStyle = `width: ${width}; height: ${height}; ${style}`;
+    
+    return `<span class="layout-image-placeholder ${className}" ${id ? `id="${id}"` : ''} style="${combinedStyle}"></span>`;
+  });
 }
 
 // Pre-populate editors with sample code (simplified version of solution)
@@ -3391,293 +3446,326 @@ function createOutputDisplay(title, canvas, viewport) {
 
 // Initialize with sample Todo app code
 function initializeSampleCode() {
-  const sampleHTML = `<!DOCTYPE html>
-<html lang="en">
+  // User version with visual differences and images
+  const userHTML = `
+<!DOCTYPE html>
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Todo App</title>
+  <title>Todo App</title>
 </head>
 <body>
-    <div class="container">
-        <h1>My Todo List</h1>
-        <div class="input-section">
-            <input type="text" id="todo-input" placeholder="Add a new task...">
-            <button id="add-button">Add</button>
-        </div>
-        <ul id="todo-list"></ul>
+  <div class="todo-container">
+    <img src="https://images.pexels.com/photos/45201/kitty-cat-kitten-pet-45201.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500" alt="User Logo" class="logo" width="100px" height="100px">
+    <h1>My Todo List</h1>
+    <div class="input-section">
+      <input type="text" id="todo-input" placeholder="Enter a task...">
+      <button id="add-button">Add Task</button>
     </div>
+    <ul id="todo-list"></ul>
+    <div class="footer">
+      <img src="https://images.pexels.com/photos/45201/kitty-cat-kitten-pet-45201.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500" alt="Footer Image" class="footer-img" width="100px" height="100px">
+      <p>Powered by User Implementation</p>
+    </div>
+  </div>
 </body>
-</html>`;
+</html>
+  `;
 
-  // USER VERSION - with differences for demonstration
-  const userCSS = `* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
+  const userCSS = `
 body {
-    font-family: 'Arial', sans-serif;
-    margin: 20px 0 10px;
-    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-    min-height: 100vh;
-    padding: 15px;
+  font-family: 'Comic Sans MS', cursive;
+  background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+  padding: 20px;
+  margin: 0;
 }
 
-.container {
-    max-width: 500px;
-    margin: 0 auto;
-    background: white;
-    border-radius: 15px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    padding: 25px;
+.logo {
+  display: block;
+  margin: 0 auto 20px auto;
+  border-radius: 10px;
+}
+
+.todo-container {
+  max-width: 500px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 15px;
+  padding: 30px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  border: 3px solid #ff6b6b;
 }
 
 h1 {
-    text-align: left;
-    color: #ff6b6b;
-    margin-bottom: 25px;
-    font-size: 2em;
+  text-align: center;
+  color: #ff6b6b;
+  font-size: 2.5em;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  margin-bottom: 30px;
 }
 
 .input-section {
-    display: block;
-    margin-bottom: 25px;
+  display: flex;
+  margin-bottom: 25px;
+  gap: 10px;
 }
 
 #todo-input {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    font-size: 14px;
-    margin-bottom: 10px;
+  flex: 1;
+  padding: 15px;
+  border: 3px solid #4ecdc4;
+  border-radius: 25px;
+  font-size: 16px;
+  background: #f0f8ff;
 }
 
 #add-button {
-    width: 100%;
-    padding: 12px 20px;
-    background: #ff6b6b;
-    color: white;
-    border: none;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background 0.3s;
+  padding: 15px 25px;
+  background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 16px;
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+  transition: all 0.3s ease;
 }
 
 #add-button:hover {
-    background: #ee5a24;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.6);
 }
 
 #todo-list {
-    list-style: none;
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
 }
 
 .todo-item {
-    display: block;
-    padding: 10px;
-    margin-bottom: 8px;
-    background: #ffe8e8;
-    border-radius: 3px;
-    border-left: 3px solid #ff6b6b;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  animation: slideIn 0.3s ease;
 }
 
-.todo-item.completed {
-    opacity: 0.5;
-    text-decoration: line-through;
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 .delete-btn {
-    background: #ff4757;
-    color: white;
-    border: none;
-    padding: 6px 10px;
-    border-radius: 2px;
-    cursor: pointer;
-    font-size: 11px;
-    float: right;
+  padding: 8px 15px;
+  background: linear-gradient(45deg, #ff4757, #ff6b7a);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s ease;
 }
 
 .delete-btn:hover {
-    background: #ff3742;
+  transform: scale(1.1);
+  box-shadow: 0 4px 15px rgba(255, 71, 87, 0.5);
 }
 
-@media (max-width: 768px) {
-    .container {
-        margin: 5px;
-        padding: 15px;
-    }
-    
-    h1 {
-        font-size: 1.8em;
-    }
-}`;
-
-  // EXPECTED VERSION - the "correct" solution
-  const expectedCSS = `* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+.footer {
+  text-align: center;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 2px solid #4ecdc4;
 }
 
+.footer-img {
+  margin-bottom: 10px;
+}
+
+.footer p {
+  color: #666;
+  font-style: italic;
+  margin: 0;
+}
+  `;
+
+  // Expected version with different styling and images
+  const expectedHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Todo App</title>
+</head>
+<body>
+  <div class="todo-container">
+    <img src="https://images.pexels.com/photos/45201/kitty-cat-kitten-pet-45201.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500" alt="Expected Logo" class="logo" width="100px" height="100px">
+    <h1>My Todo List</h1>
+    <div class="input-section">
+      <input type="text" id="todo-input" placeholder="Enter a task...">
+      <button id="add-button">Add Task</button>
+    </div>
+    <ul id="todo-list"></ul>
+    <div class="footer">
+      <img src="https://images.pexels.com/photos/45201/kitty-cat-kitten-pet-45201.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500" alt="Footer Image" class="footer-img" width="100px" height="100px">
+      <p>Powered by Expected Implementation</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  const expectedCSS = `
 body {
-    font-family: 'Arial', sans-serif;
-    margin: 20px 0 10px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-    padding: 20px;
+  font-family: Arial, sans-serif;
+  background-color: #f0f0f0;
+  padding: 20px;
+  margin: 0;
 }
 
-.container {
-    max-width: 600px;
-    margin: 0 auto;
-    background: white;
-    border-radius: 10px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    padding: 30px;
+.logo {
+  display: block;
+  margin: 0 auto 15px auto;
+}
+
+.todo-container {
+  max-width: 500px;
+  margin: 0 auto;
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 h1 {
-    text-align: center;
-    color: #333;
-    margin-bottom: 30px;
-    font-size: 2.5em;
+  text-align: center;
+  color: #444;
+  margin-bottom: 20px;
 }
 
 .input-section {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 30px;
+  display: flex;
+  margin-bottom: 20px;
 }
 
 #todo-input {
-    flex: 1;
-    padding: 15px;
-    border: 2px solid #ddd;
-    border-radius: 5px;
-    font-size: 16px;
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px 0 0 4px;
 }
 
 #add-button {
-    padding: 15px 25px;
-    background: #667eea;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background 0.3s;
-}
-
-#add-button:hover {
-    background: #5a6fd8;
+  padding: 10px 15px;
+  background-color: #5cb85c;
+  color: white;
+  border: none;
+  border-radius: 0 4px 4px 0;
+  cursor: pointer;
 }
 
 #todo-list {
-    list-style: none;
+  list-style-type: none;
+  padding: 0;
 }
 
 .todo-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px;
-    margin-bottom: 10px;
-    background: #f8f9fa;
-    border-radius: 5px;
-    border-left: 4px solid #667eea;
-}
-
-.todo-item.completed {
-    opacity: 0.6;
-    text-decoration: line-through;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
 }
 
 .delete-btn {
-    background: #e74c3c;
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 12px;
+  padding: 5px 10px;
+  background-color: #d9534f;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
-.delete-btn:hover {
-    background: #c0392b;
+.footer {
+  text-align: center;
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
 }
 
-@media (max-width: 768px) {
-    .container {
-        margin: 10px;
-        padding: 20px;
+.footer-img {
+  margin-bottom: 5px;
+}
+
+.footer p {
+  color: #666;
+  margin: 0;
+}
+  `;
+
+  const sharedJS = `
+document.addEventListener('DOMContentLoaded', function() {
+  const todoInput = document.getElementById('todo-input');
+  const addButton = document.getElementById('add-button');
+  const todoList = document.getElementById('todo-list');
+
+  // Function to add a new todo
+  function addTodo() {
+    const text = todoInput.value.trim();
+    if (text) {
+      // Create list item
+      const li = document.createElement('li');
+      li.className = 'todo-item';
+      
+      // Create text span
+      const span = document.createElement('span');
+      span.textContent = text;
+      
+      // Create delete button
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'delete-btn';
+      deleteBtn.textContent = 'Delete';
+      
+      // Add event listener to delete button
+      deleteBtn.addEventListener('click', function() {
+        li.remove();
+      });
+      
+      // Append elements
+      li.appendChild(span);
+      li.appendChild(deleteBtn);
+      todoList.appendChild(li);
+      
+      // Clear input
+      todoInput.value = '';
     }
-    
-    h1 {
-        font-size: 2em;
+  }
+
+  // Event listeners
+  addButton.addEventListener('click', addTodo);
+  todoInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      addTodo();
     }
-    
-    .input-section {
-        flex-direction: column;
-    }
-    
-    #add-button {
-        padding: 12px;
-    }
-}`;
+  });
+});
+  `;
 
-  const sampleJS = `document.addEventListener('DOMContentLoaded', function() {
-    const todoInput = document.getElementById('todo-input');
-    const addButton = document.getElementById('add-button');
-    const todoList = document.getElementById('todo-list');
+  // Set user code
+  htmlEditor.value = userHTML.trim();
+  cssEditor.value = userCSS.trim();
+  jsEditor.value = sharedJS.trim();
 
-    function addTodo() {
-        const todoText = todoInput.value.trim();
-        if (todoText === '') return;
+  // Set expected code
+  solutionHtmlEditor.value = expectedHTML.trim();
+  solutionCssEditor.value = expectedCSS.trim();
+  solutionJsEditor.value = sharedJS.trim();
 
-        const todoItem = document.createElement('li');
-        todoItem.className = 'todo-item';
-        
-        todoItem.innerHTML = \`
-            <span>\${todoText}</span>
-            <button class="delete-btn">Delete</button>
-        \`;
-
-        const deleteBtn = todoItem.querySelector('.delete-btn');
-        deleteBtn.addEventListener('click', function() {
-            todoItem.remove();
-        });
-
-        todoItem.addEventListener('click', function(e) {
-            if (e.target !== deleteBtn) {
-                todoItem.classList.toggle('completed');
-            }
-        });
-
-        todoList.appendChild(todoItem);
-        todoInput.value = '';
-    }
-
-    addButton.addEventListener('click', addTodo);
-    
-    todoInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            addTodo();
-        }
-    });
-});`;
-
-  // Set the USER version (with differences)
-  if (htmlEditor) htmlEditor.value = sampleHTML;
-  if (cssEditor) cssEditor.value = userCSS;
-  if (jsEditor) jsEditor.value = sampleJS;
-  
-  // Set the EXPECTED version (the "correct" solution)
-  if (solutionHtmlEditor) solutionHtmlEditor.value = sampleHTML;
-  if (solutionCssEditor) solutionCssEditor.value = expectedCSS;
-  if (solutionJsEditor) solutionJsEditor.value = sampleJS;
+  console.log('Sample code with images initialized for both user and expected versions');
 }
 
 // ... existing code ...
