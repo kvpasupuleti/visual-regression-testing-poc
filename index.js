@@ -258,6 +258,8 @@ saveTestsButton.addEventListener('click', saveCustomTests);
 runCustomTestsButton.addEventListener('click', runCustomTests);
 runAllButton.addEventListener('click', runAllTests);
 displayOutputsButton.addEventListener('click', displayViewportOutputs);
+generateViewportDiffsButton.addEventListener('click', generateAllViewportDiffs);
+applyViewportButton.addEventListener('click', applySelectedViewport);
 
 // Function to show a toast message
 function showToast(message, type = 'success') {
@@ -336,12 +338,23 @@ function runUserCode() {
     // Set the HTML content using srcdoc
     userOutputFrame.srcdoc = fullHtml;
 
+    // Set desktop viewport dimensions by default
+    setTimeout(() => {
+      setIframeViewportDimensions(userOutputFrame, 1280, 720);
+    }, 100);
+
     // Also update the second user iframe with transformed CSS
     const userOutputFrame2 = document.getElementById('user-output-2');
     if (userOutputFrame2) {
       const transformedCSS = transformCSS(css);
       const layoutHtml = createFullHtml(html, transformedCSS, js);
       userOutputFrame2.srcdoc = layoutHtml;
+      
+      // Set desktop viewport dimensions for layout iframe too
+      setTimeout(() => {
+        setIframeViewportDimensions(userOutputFrame2, 1280, 720);
+      }, 100);
+      
       console.log('User layout code updated with transformed CSS');
     }
 
@@ -372,12 +385,23 @@ function updateSolutionCode() {
     // Set the HTML content using srcdoc
     expectedOutputFrame.srcdoc = fullHtml;
 
+    // Set desktop viewport dimensions by default
+    setTimeout(() => {
+      setIframeViewportDimensions(expectedOutputFrame, 1280, 720);
+    }, 100);
+
     // Also update the second expected iframe with transformed CSS
     const expectedOutputFrame2 = document.getElementById('expected-output-2');
     if (expectedOutputFrame2) {
       const transformedCSS = transformCSS(css);
       const layoutHtml = createFullHtml(html, transformedCSS, js);
       expectedOutputFrame2.srcdoc = layoutHtml;
+      
+      // Set desktop viewport dimensions for layout iframe too
+      setTimeout(() => {
+        setIframeViewportDimensions(expectedOutputFrame2, 1280, 720);
+      }, 100);
+      
       console.log('Solution layout code updated with transformed CSS');
     }
 
@@ -1027,6 +1051,7 @@ function createFullHtml(html, css, js, forLayout = false) {
     <html>
     <head>
       <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <style>${css}</style>
       ${forLayout ? `
       <style>
@@ -1995,6 +2020,7 @@ function initialize() {
   const runCustomTestsButton = document.getElementById('run-custom-tests-btn');
   const displayOutputsButton = document.getElementById('display-outputs-btn');
   const generateViewportDiffsButton = document.getElementById('generate-viewport-diffs-btn');
+  const applyViewportButton = document.getElementById('apply-viewport-btn');
 
   if (runButton) runButton.addEventListener('click', runUserCode);
   if (testButton) testButton.addEventListener('click', runVisualTest);
@@ -2005,6 +2031,7 @@ function initialize() {
   if (runCustomTestsButton) runCustomTestsButton.addEventListener('click', runCustomTests);
   if (displayOutputsButton) displayOutputsButton.addEventListener('click', displayViewportOutputs);
   if (generateViewportDiffsButton) generateViewportDiffsButton.addEventListener('click', generateAllViewportDiffs);
+  if (applyViewportButton) applyViewportButton.addEventListener('click', applySelectedViewport);
 }
 
 // Initialize when the DOM is fully loaded
@@ -4232,4 +4259,88 @@ async function generateAllViewportDiffs() {
     showToast('Error generating viewport diffs: ' + error.message, 'error');
     return false;
   }
+}
+
+// Set iframe viewport dimensions
+function setIframeViewportDimensions(iframe, width, height) {
+  if (!iframe) {
+    console.warn('No iframe provided to setIframeViewportDimensions');
+    return;
+  }
+  
+  console.log(`Setting iframe dimensions to ${width}x${height}`);
+  
+  // Set iframe dimensions
+  iframe.style.width = width + 'px';
+  iframe.style.height = height + 'px';
+  iframe.style.minWidth = width + 'px';
+  iframe.style.minHeight = height + 'px';
+  iframe.style.maxWidth = width + 'px';
+  iframe.style.maxHeight = height + 'px';
+  
+  // Log current dimensions for debugging
+  const container = iframe.closest('.iframe-container');
+  if (container) {
+    console.log('Container dimensions:', {
+      width: container.offsetWidth,
+      height: container.offsetHeight,
+      scrollWidth: container.scrollWidth,
+      scrollHeight: container.scrollHeight
+    });
+  }
+  
+  console.log('Iframe dimensions after setting:', {
+    width: iframe.offsetWidth,
+    height: iframe.offsetHeight,
+    styleWidth: iframe.style.width,
+    styleHeight: iframe.style.height
+  });
+}
+
+// Apply selected viewport dimensions
+function applySelectedViewport() {
+  const viewportSelect = document.getElementById('viewport-select');
+  if (!viewportSelect) {
+    console.warn('Viewport selector not found');
+    return;
+  }
+  
+  const selectedValue = viewportSelect.value;
+  console.log('Applying viewport:', selectedValue);
+  
+  // Parse dimensions from the selected value
+  let width, height;
+  switch (selectedValue) {
+    case 'mobile':
+      width = 360;
+      height = 640;
+      break;
+    case 'tablet':
+      width = 768;
+      height = 1024;
+      break;
+    case 'desktop':
+      width = 1280;
+      height = 720;
+      break;
+    default:
+      console.warn('Unknown viewport:', selectedValue);
+      width = 1280;
+      height = 720;
+  }
+  
+  // Apply to all iframes
+  const iframes = document.querySelectorAll('iframe');
+  iframes.forEach((iframe, index) => {
+    console.log(`Applying ${width}x${height} to iframe ${index + 1}`);
+    setIframeViewportDimensions(iframe, width, height);
+  });
+  
+  // Show confirmation
+  showToast(`Applied ${selectedValue} viewport (${width}×${height})`, 'success');
+  
+  // Re-run user code to refresh display
+  setTimeout(() => {
+    runUserCode();
+  }, 500);
 }
